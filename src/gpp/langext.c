@@ -11,9 +11,10 @@ struct extention_info{
 
 
 static struct extention_info extention_database[] = {
-    { .language=PYTHON,     .extls=PYTHON_EXT },
-    { .language=C,          .extls=C_EXT      },
-    { .language=JAVASCRIPT, .extls=JAVASCRIPT_EXT },
+    { .language=PYTHON,       .extls=PYTHON_EXT     },
+    { .language=C,            .extls=C_EXT          },
+    { .language=JAVASCRIPT,   .extls=JAVASCRIPT_EXT },
+    { .language=TYPESCRIPT,   .extls=TYPESCRIPT_EXT },
 };
 
 
@@ -30,6 +31,31 @@ static int extention_in_list(const char *ext, const char **extls)
         current_ext++;
     }
     return 0;
+}
+
+const char *language_itoa(enum language language)
+{
+    static char language_as_str[16];
+
+    switch(language){
+        case PYTHON:
+            strcpy(language_as_str, "python");
+            break;
+        case C:
+            strcpy(language_as_str, "c");
+            break;
+        case JAVASCRIPT:
+            strcpy(language_as_str, "javascript");
+            break;
+        case TYPESCRIPT:
+            strcpy(language_as_str, "typescript");
+            break;
+        default:
+            strcpy(language_as_str, "unknown");
+            break;
+    }
+
+    return language_as_str;
 }
 
 /* guess the programming language base on the path extension string */
