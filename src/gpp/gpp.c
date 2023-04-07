@@ -15,17 +15,39 @@ static char *progname;
 
 void usage()
 {
-    printf(
+    eprintf(
         "%s [flags] ...files\n"
         "\n"
         "options:\n"
         "   -h, --help\tprint this message to STDOUT\n"
         "   -D, --debug\tprint debug messages to STDOUT\n"
-        "   -q, --quiet\tdon't print anything to STDOUT, not even errors\n"
+        "   -q, --quiet\tdon't print anything to STDOUT, not even critical errors\n"
         "   -l, --follow-links\tfollow link to source files\n"
+        "   -p, --prefix\tset preprocessor operation prefix (default `#`)\n"
+        "   -o, --output\toutput directory path to put all the postprocessed files in (default `pgpp`)\n"
+        "   -m, --minimize\tremove empty lines"
     , progname);
     exit(EXIT_FAILURE);
 }
+
+
+// used only in `parse_argv`, get the flag argument
+#define GET_OPTION_VALUE(argc, argv, dst) do{ \
+        if(*argc < 2) \
+            die( \
+                "arguments", "missing required value for flag", \
+                "%s requires a value" \
+            , **argv); \
+        (*argc)--; \
+        (*argv)++; \
+        dst = **argv; \
+        if(*dst == '-') \
+            die( \
+                "arguments", "given value to %s", \
+                "given value to %s cannot start with `-`" \
+            , *((*argv)-1), *((*argv)-1)); \
+    } while(0)
+
 
 void parse_argv(int *argc, char ***argv, strbuf_list *buffs)
 {
@@ -38,6 +60,12 @@ void parse_argv(int *argc, char ***argv, strbuf_list *buffs)
             config.follow_links = 1;
         } else if(!strcmp(**argv, "-q") || !strcmp(**argv, "--quiet")){
             config.logging_level = LOGGING_QUIET_LEVEL;
+        } else if(!strcmp(**argv, "-m") || !strcmp(**argv, "--minimize")) {
+            config.minimize = 1;
+        } else if(!strcmp(**argv, "-p") || !strcmp(**argv, "--prefix")){
+            GET_OPTION_VALUE(argc, argv, config.op_prefix);
+        } else if(!strcmp(**argv, "-o") || !strcmp(**argv, "--output")){
+            GET_OPTION_VALUE(argc, argv, config.output_dir);
         } else {
             if(!strncmp(**argv, "--", 2) || !strncmp(**argv, "-", 1))
                 die("arguments", "%s", "unknown argument passed", **argv);
@@ -68,7 +96,6 @@ void unfold_directories(strbuf_list *entries, const char *path)
         strbuf_set(&entrypath, path);
         strbuf_append_char(&entrypath, '/');
         strbuf_append(&entrypath, direntry->d_name);
-
         strbuf_list_append(entries, entrypath.string);
     }
     
@@ -92,7 +119,6 @@ void check_entries(strbuf_list *entries)
         
         if(ignore_path(path))
             continue;
-        lpdebug("checking %s", path);
 
         if(stat(path, &entry_stat) == -1){
             lperror(
@@ -100,6 +126,7 @@ void check_entries(strbuf_list *entries)
                 "invalid entry was given %s, does not exists", path, path
             ); 
             has_error = 1;
+            continue;
         }
 
         switch(entry_stat.st_mode & S_IFMT){
@@ -148,5 +175,6 @@ int main(int argc, char **argv)
     gpp_config_init();
     check_entries(&entries);
     run_on_entries(&entries);
+    strbuf_list_free(&entries);
 }
 

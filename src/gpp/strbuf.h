@@ -38,6 +38,7 @@ extern void strbuf_rstrip(strbuf *);
 extern void strbuf_list_append(strbuf_list *, const char *);
 extern void strbuf_list_from_stream(strbuf_list *, FILE *);
 extern void strbuf_list_pop_index(strbuf_list *, int);
+extern void strbuf_list_free(strbuf_list *);
 
 #define strbuf_strip(buf) do { \
         strbuf_lstrip(buf); \

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "logging.h"
 #include "strbuf.h"
@@ -104,7 +105,7 @@ void strbuf_lstrip(strbuf *buf)
         return;
 
     char *c = buf->string;
-    while(*c == ' ' || *c == '\t')
+    while(isspace(*c))
         c++;
     
     if(c == buf->string)
@@ -172,5 +173,15 @@ void strbuf_list_from_stream(strbuf_list *bufls, FILE *stream)
         if(line->length && line->string[line->length-1] == '\n')
             strbuf_pop(line); 
     }
+}
+
+void strbuf_list_free(strbuf_list *bufls)
+{
+    if(bufls->_allocated == 0)
+        return;
+
+    for(int i=0; i<bufls->_allocated; i++)
+        strbuf_free(bufls->strings[i]);
+    free(bufls->strings);
 }
 

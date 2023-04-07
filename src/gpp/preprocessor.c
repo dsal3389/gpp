@@ -1,26 +1,20 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "strbuf.h"
 #include "logging.h"
 #include "preprocessor.h"
-#include "strbuf.h"
+#include "tokenization.h"
+#include "langext.h"
 
 
 #define LINEBREAK_CHAR '\\'
 
-#define TOKEN_ONELINER 1
-#define TOKEN_FUNCTION 2
-
 
 struct preprocess_entry{
+    enum language language;
     const char *path;
-    FILE *stream;
     strbuf_list content;
-};
-
-struct token{
-    strbuf *tokenline;
-    int type;
 };
 
 
@@ -60,7 +54,7 @@ void merge_continued_lines(struct preprocess_entry *pe)
             );
         
         // remove the LINEBREAK char
-        strbuf_pop(line);
+        // strbuf_pop(line);
 
         // get one line below, so we can merge
         // it into the current line
@@ -75,22 +69,47 @@ void merge_continued_lines(struct preprocess_entry *pe)
     }
 }
 
+void tokenize_and_parse_lines(struct preprocess_entry *pe)
+{
+    struct token tokens[1024];
+    strbuf *line = NULL;
+
+    for(int i=0; i<pe->content.length; i++){
+        line = pe->content.strings[i];
+
+        if(!line->length)
+            continue;
+
+        tokenize_string(tokens, pe->content.strings[i]->string, pe->language);
+    }
+}
+
 void preprocess_entry(const char *path)
 {
+    FILE *stream = fopen(path, "r");
     struct preprocess_entry pe = {
         .path = path,
-        .stream = fopen(path, "r"),
         .content = STRBUF_LIST_INIT,
+        .language = get_path_language_code(path)
     };
 
-    if(pe.stream == NULL)
+    lpdebug(
+        "preprocessing entry information: path=%s, language code=%d"
+    , pe.path, pe.language);
+
+    if(stream == NULL)
         die("%s", "io", "couldn't open file %s", path, path);
+    
+    if(pe.language == LANG_UNKNOWN)
+        lpwarn(
+            "%s", "supported programming langauge wasn't detected",
+            "behaviour may be unexpected", pe.path
+        );
 
-    strbuf_list_from_stream(&pe.content, pe.stream);
+    strbuf_list_from_stream(&pe.content, stream);
     merge_continued_lines(&pe);
-
-    // for(int i=0; i<pe.content.length; i++)
-    //     lpdebug("%03d   | %s", i, pe.content.strings[i]->string);
-
-    fclose(pe.stream);
+    tokenize_and_parse_lines(&pe);
+    
+    strbuf_list_free(&pe.content);
+    fclose(stream);
 }

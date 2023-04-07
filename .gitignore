@@ -1,4 +1,4 @@
 
 .gppignore
-test
+test*
 gpp.bin
