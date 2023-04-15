@@ -3,18 +3,19 @@
 
 
 #include "strbuf.h"
-#include "langext.h"
 
 
 typedef enum {
     TOKEN_UNKNOWN,
-    TOKEN_KEYWORD,
     TOKEN_IDENTIFIER,
     TOKEN_SEPARATOR,
     TOKEN_OPERATOR,
     TOKEN_LITERAL,
     TOKEN_STRING,
     TOKEN_NUMBER,
+    TOKEN_EMPTY,
+    TOKEN_SPACE,
+    TOKEN_PREPROCESS,
 } token_type;
 
 
@@ -24,8 +25,13 @@ struct token{
     strbuf value;
 };
 
+struct tokens_info{
+    unsigned int tcount;
+    struct token *tokens;
+};
 
-extern int tokenize_string(struct token *, const char *, enum language);
+
+extern int tokenize_string(struct token *, const char *);
 
 
 #endif

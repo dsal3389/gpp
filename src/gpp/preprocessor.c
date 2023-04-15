@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "strbuf.h"
 #include "logging.h"
@@ -47,11 +48,13 @@ void merge_continued_lines(struct preprocess_entry *pe)
         if(!merge)
             continue;
         
-        if(i + 1 >= pe->content.length)
-            die(
+        if(i + 1 >= pe->content.length){
+            lpinfo(
                 "file %s", "unexpected line break at the end of the file",
                 "%d | %s", pe->path, i+1, line->string
             );
+            continue;
+        }
         
         // remove the LINEBREAK char
         // strbuf_pop(line);
@@ -69,8 +72,14 @@ void merge_continued_lines(struct preprocess_entry *pe)
     }
 }
 
+void parse_tokens(struct token *token, int token_count)
+{
+    
+}
+
 void tokenize_and_parse_lines(struct preprocess_entry *pe)
 {
+    int token_count = 0;
     struct token tokens[1024];
     strbuf *line = NULL;
 
@@ -80,7 +89,11 @@ void tokenize_and_parse_lines(struct preprocess_entry *pe)
         if(!line->length)
             continue;
 
-        tokenize_string(tokens, pe->content.strings[i]->string, pe->language);
+        token_count = tokenize_string(tokens, pe->content.strings[i]->string);
+
+        for(int j=0; j<token_count; j++){
+            lpdebug("\t type %d | %s", tokens[j].type, tokens[j].value.string);
+        }
     }
 }
 
@@ -94,15 +107,16 @@ void preprocess_entry(const char *path)
     };
 
     lpdebug(
-        "preprocessing entry information: path=%s, language code=%d"
-    , pe.path, pe.language);
+        "preprocessing entry information: path=%s, language=%s"
+    , pe.path, language_itoa(pe.language));
 
     if(stream == NULL)
         die("%s", "io", "couldn't open file %s", path, path);
     
+    // LANG_UNKNOWN returned by `get_path_language_code`
     if(pe.language == LANG_UNKNOWN)
         lpwarn(
-            "%s", "supported programming langauge wasn't detected",
+            "%s", "support programming langauge wasn't detected",
             "behaviour may be unexpected", pe.path
         );
 

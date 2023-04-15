@@ -131,7 +131,10 @@ void check_entries(strbuf_list *entries)
 
         switch(entry_stat.st_mode & S_IFMT){
             case S_IFDIR:
+                // unfold the directory entries and pop the directories out
+                // because we don't need to scan them
                 unfold_directories(entries, path);
+                strbuf_list_pop_index(entries, i--);
                 break;
             case S_IFLNK:
                 if(!config.follow_links){

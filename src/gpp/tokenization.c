@@ -15,7 +15,7 @@
 #define is_operator_char(c) \
     strchr("|+=-<>*$&^%!", c) != NULL
 #define is_string_identifier_char(cptr) \
-    (*c == '"' || *c == '\'')
+    (*c == '"' || *c == '\'' || *c == '`')
 
 
 #define GET_WHOLE_TOKEN(chk_func, type_) \
@@ -24,32 +24,38 @@
     token->type = type_; \
 
 
-int tokenize_string(struct token *tokens_buf, const char *str, enum language language)
+int tokenize_string(struct token *tokens_buf, const char *str)
 {
     struct token *token = NULL;
     int found_tokens = 0;
     const char *c = str;
 
-    while(*c){
+    for(; *c; found_tokens++){
         token = &tokens_buf[found_tokens];
         token->origin = str;
 
         strbuf_set(&token->value, "");
 
-        while(isspace(*c))
-            c++;
+        if(isspace(*c)){
+            GET_WHOLE_TOKEN(isspace, TOKEN_SPACE);
+            continue;
+        }
 
-        if(!strcmp(c, config.op_prefix))
+        if(!strncmp(c, config.op_prefix, strlen(config.op_prefix))){
+            strbuf_set(&token->value, config.op_prefix);
+            token->type = TOKEN_PREPROCESS;
             c += strlen(config.op_prefix);
-
-        if(*c == 0)
-            break;
+            continue;
+        }
 
         switch(*c){
             case 'A'...'Z':
             case 'a'...'z':
             case '_':
                 GET_WHOLE_TOKEN(is_identifier_char, TOKEN_IDENTIFIER);
+                break;
+            case '0'...'9':
+                GET_WHOLE_TOKEN(isdigit, TOKEN_NUMBER);
                 break;
             case '|':
             case '+':
@@ -78,28 +84,25 @@ int tokenize_string(struct token *tokens_buf, const char *str, enum language lan
             case ')':
             case '/':
             case '\\':
-                strbuf_append_char(&token->value, *c);
+                strbuf_append_char(&token->value, *c++);
                 token->type = TOKEN_SEPARATOR;
-                break;
-            case '0'...'9':
-                GET_WHOLE_TOKEN(isdigit, TOKEN_NUMBER);
                 break;
             case '"':
             case '\'':
-                c++;
-                for(; !is_string_identifier_char(c); c++)
-                    strbuf_append_char(&token->value, *c);
+            case '`':
+                do{
+                    strbuf_append_char(&token->value, *c++);
+                } while(!is_string_identifier_char(c));
+
+                // append the closing quotation mark
+                strbuf_append_char(&token->value, *c++);
                 token->type = TOKEN_STRING;
-                c++;
                 break;
             default:
-                strbuf_append_char(&token->value, *c);
+                strbuf_append_char(&token->value, *c++);
                 token->type = TOKEN_UNKNOWN;
-                c++;
                 break;
         }
-
-        found_tokens++;
     }
 
     return found_tokens;

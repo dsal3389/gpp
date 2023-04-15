@@ -9,7 +9,6 @@ struct extention_info{
     const char *extls[16];
 };
 
-
 static struct extention_info extention_database[] = {
     { .language=PYTHON,       .extls=PYTHON_EXT     },
     { .language=C,            .extls=C_EXT          },
@@ -33,6 +32,7 @@ static int extention_in_list(const char *ext, const char **extls)
     return 0;
 }
 
+/* convert a language code to a string */
 const char *language_itoa(enum language language)
 {
     static char language_as_str[16];
@@ -42,7 +42,7 @@ const char *language_itoa(enum language language)
             strcpy(language_as_str, "python");
             break;
         case C:
-            strcpy(language_as_str, "c");
+            strcpy(language_as_str, "c/c++");
             break;
         case JAVASCRIPT:
             strcpy(language_as_str, "javascript");
