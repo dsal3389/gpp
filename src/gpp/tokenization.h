@@ -3,9 +3,13 @@
 
 
 #include "strbuf.h"
+#include "langext.h"
 
 
-typedef enum {
+#define TOKEN_CONTEXT(str, lang) { ._offset=0, ._origin=str, ._language=lang }
+
+
+enum token_type{
     TOKEN_UNKNOWN,
     TOKEN_IDENTIFIER,
     TOKEN_SEPARATOR,
@@ -16,22 +20,24 @@ typedef enum {
     TOKEN_EMPTY,
     TOKEN_SPACE,
     TOKEN_PREPROCESS,
-} token_type;
+};
 
 
 struct token{
     const char *origin;
-    token_type type;
+    enum token_type type;
     strbuf value;
 };
 
-struct tokens_info{
-    unsigned int tcount;
-    struct token *tokens;
+struct tokenctx{
+    off_t _offset;
+    const char *_origin;
+    enum language _language;
 };
 
 
-extern int tokenize_string(struct token *, const char *);
+extern struct token *expect_next_token(struct tokenctx *, enum token_type, const char *, unsigned int);
+extern struct token *next_token(struct tokenctx *);
 
 
 #endif

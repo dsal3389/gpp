@@ -72,28 +72,25 @@ void merge_continued_lines(struct preprocess_entry *pe)
     }
 }
 
-void parse_tokens(struct token *token, int token_count)
-{
-    
-}
 
-void tokenize_and_parse_lines(struct preprocess_entry *pe)
+void tokenize_lines(struct preprocess_entry *pe)
 {
-    int token_count = 0;
-    struct token tokens[1024];
-    strbuf *line = NULL;
+    const char *line = NULL;
+    struct token *token;
 
     for(int i=0; i<pe->content.length; i++){
-        line = pe->content.strings[i];
+        line = pe->content.strings[i]->string;
+        struct tokenctx ctx = TOKEN_CONTEXT(line, pe->language);
 
-        if(!line->length)
-            continue;
-
-        token_count = tokenize_string(tokens, pe->content.strings[i]->string);
-
-        for(int j=0; j<token_count; j++){
-            lpdebug("\t type %d | %s", tokens[j].type, tokens[j].value.string);
+        token = next_token(&ctx);
+        if(token != NULL && token->type == TOKEN_PREPROCESS){
+            token = expect_next_token(&ctx, TOKEN_SPACE, pe->path, i+1);
+            printf("ttoken %s\n", token->value.string);
         }
+
+        // while((token=next_token(&ctx)) != NULL){
+        //     printf("token %s\n", token->value.string);
+        // }
     }
 }
 
@@ -122,7 +119,7 @@ void preprocess_entry(const char *path)
 
     strbuf_list_from_stream(&pe.content, stream);
     merge_continued_lines(&pe);
-    tokenize_and_parse_lines(&pe);
+    tokenize_lines(&pe);
     
     strbuf_list_free(&pe.content);
     fclose(stream);
