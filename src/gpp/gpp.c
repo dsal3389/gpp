@@ -15,7 +15,7 @@ static char *progname;
 
 void usage()
 {
-    eprintf(
+    logeprintf(
         "%s [flags] ...files\n"
         "\n"
         "options:\n"
@@ -31,8 +31,9 @@ void usage()
 }
 
 
-// used only in `parse_argv`, get the flag argument
-#define GET_OPTION_VALUE(argc, argv, dst) do{ \
+// used only in `parse_argv`, get the flag argument, `dst` is the variable where
+// to store the results
+#define GET_OPTION_VALUE(dst) do{ \
         if(*argc < 2) \
             die( \
                 "arguments", "missing required value for flag", \
@@ -63,9 +64,9 @@ void parse_argv(int *argc, char ***argv, strbuf_list *buffs)
         } else if(!strcmp(**argv, "-m") || !strcmp(**argv, "--minimize")) {
             config.minimize = 1;
         } else if(!strcmp(**argv, "-p") || !strcmp(**argv, "--prefix")){
-            GET_OPTION_VALUE(argc, argv, config.op_prefix);
+            GET_OPTION_VALUE(config.op_prefix);
         } else if(!strcmp(**argv, "-o") || !strcmp(**argv, "--output")){
-            GET_OPTION_VALUE(argc, argv, config.output_dir);
+            GET_OPTION_VALUE(config.output_dir);
         } else {
             if(!strncmp(**argv, "--", 2) || !strncmp(**argv, "-", 1))
                 die("arguments", "%s", "unknown argument passed", **argv);
@@ -131,10 +132,8 @@ void check_entries(strbuf_list *entries)
 
         switch(entry_stat.st_mode & S_IFMT){
             case S_IFDIR:
-                // unfold the directory entries and pop the directories out
-                // because we don't need to scan them
                 unfold_directories(entries, path);
-                strbuf_list_pop_index(entries, i--);
+                strbuf_list_pop_index(entries, i--);  // pop the current index because its a directory path
                 break;
             case S_IFLNK:
                 if(!config.follow_links){
@@ -145,6 +144,10 @@ void check_entries(strbuf_list *entries)
                     break;
                 }
                 // TODO: support link followup
+                lpinfo(
+                    "TODO", "follow links", 
+                    "this feature is not ready yet."
+                );
             case S_IFREG:
             case S_IFBLK:
                 break;

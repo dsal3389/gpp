@@ -24,6 +24,7 @@ struct gpp_config{
 
 
 extern struct gpp_config config;
+
 extern void gpp_config_init();
 extern int ignore_path(const char *);
 

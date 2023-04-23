@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 #include "config.h"
@@ -24,32 +25,55 @@
     token.type = type_; \
 
 
-struct token *expect_next_token(struct tokenctx *ctx, enum token_type type, const char *filename, unsigned int lnum)
+void tokenctx(struct tokenctx *ctx, const char *origin, enum language language)
 {
-    struct token *token = next_token(ctx);
-
-    if(token->type != type)
-        die(
-            "tokenization", "unexpected token in file %s",
-            "%u | %s", filename, lnum, token->origin
-        );
-    return token;
+    ctx->_offset = 0;
+    ctx->_language = language;
+    strbuf_set(&ctx->_origin, origin);
 }
 
-struct token *next_token(struct tokenctx *ctx)
+void freetokenctx(struct tokenctx *ctx)
 {
-    const char *ptr = &ctx->_origin[ctx->_offset];
+    ctx->_offset = 0;
+    strbuf_free(&ctx->_origin);
+}
+
+// struct token *expect_next_token(struct tokenctx *ctx, enum token_type type, const char *filename)
+// {
+//     struct token *token = next_token(ctx);
+
+//     if(token->type != type)
+//         die(
+//             "tokenization", "unexpected token in file %s",
+//             "%s", filename, ctx->_origin.string
+//         );
+//     return token;
+// }
+
+struct token *next_token(struct tokenctx *ctx, int skip_space)
+{
+    const char *ptr = &ctx->_origin.string[ctx->_offset];
+    char string_identifier;
     static struct token token;
 
-    if(*ptr == 0)
-        return NULL;
-
-    token.origin = ctx->_origin;
     strbuf_set(&token.value, "");
 
     if(isspace(*ptr)){
-        GET_WHOLE_TOKEN(isspace, TOKEN_SPACE, ptr);
-    } else if (!strncmp(ptr, config.op_prefix, strlen(config.op_prefix))){
+        if(skip_space){
+            while(isspace(*ptr)){
+                ctx->_offset++;
+                ptr++;
+            }
+        } else {
+            GET_WHOLE_TOKEN(isspace, TOKEN_SPACE, ptr);
+            goto NEXT_TOKEN_END;
+        }
+    }
+
+    if(*ptr == 0)
+        return NULL;
+    
+    if (!strncmp(ptr, config.op_prefix, strlen(config.op_prefix))){
         strbuf_set(&token.value, config.op_prefix);
         token.type = TOKEN_PREPROCESS;
     } else {
@@ -95,9 +119,10 @@ struct token *next_token(struct tokenctx *ctx)
             case '"':
             case '\'':
             case '`':
+                string_identifier = *ptr;
                 do{
                     strbuf_append_char(&token.value, *ptr++);
-                } while(!is_string_identifier_char(ptr));
+                } while(*ptr != string_identifier);
 
                 // append the closing quotation mark
                 strbuf_append_char(&token.value, *ptr++);
@@ -110,6 +135,7 @@ struct token *next_token(struct tokenctx *ctx)
         }
     }
 
+NEXT_TOKEN_END:
     ctx->_offset += token.value.length;
     return &token;
 }

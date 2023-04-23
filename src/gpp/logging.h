@@ -24,7 +24,7 @@
 #define logprintf(...) \
     if(config.logging_level != LOGGING_QUIET_LEVEL) printf(__VA_ARGS__)
 
-#define eprintf(...) \
+#define logeprintf(...) \
     if(config.logging_level != LOGGING_QUIET_LEVEL) fprintf(stderr, __VA_ARGS__)
 
 #define __logging_fmt(prefix, type, suffix, message) \
@@ -43,20 +43,20 @@
 
 #define lpdebug(message, ...) \
     if(config.logging_level >= LOGGING_DEBUG_LEVEL) \
-        logprintf(lpdebug_fmt(__FILE__, STR(__LINE__), message) __VA_OPT__(,) __VA_ARGS__)
+        logprintf(lpdebug_fmt(__FILE__, STR(__LINE__), message) __VA_OPT__(,) __VA_ARGS__);
 #define lpinfo(prefix, suffix, message, ...) \
     if(config.logging_level <= LOGGING_INFORMATIONAL_LEVEL) \
         logprintf(lpinfo_fmt(prefix, suffix, message) __VA_OPT__(,) __VA_ARGS__)
 #define lpwarn(prefix, suffix, message, ...) \
     if(config.logging_level <= LOGGING_WARNING_LEVEL) \
-        eprintf(lpwarn_fmt(prefix, suffix, message) __VA_OPT__(,) __VA_ARGS__)
+        logeprintf(lpwarn_fmt(prefix, suffix, message) __VA_OPT__(,) __VA_ARGS__)
 #define lperror(prefix, suffix, message, ...) \
     if(config.logging_level <= LOGGING_ERROR_LEVEL) \
-        eprintf(lperror_fmt(prefix, suffix, message) __VA_OPT__(,) __VA_ARGS__)
+        logeprintf(lperror_fmt(prefix, suffix, message) __VA_OPT__(,) __VA_ARGS__)
 
 #define die(prefix, suffix, message, ...) do { \
         if(config.logging_level <= LOGGING_CRITICAL_LEVEL) \
-            eprintf(lpfatal_fmt(prefix, suffix, message) __VA_OPT__(,) __VA_ARGS__); \
+            logeprintf(lpfatal_fmt(prefix, suffix, message) __VA_OPT__(,) __VA_ARGS__); \
         exit(EXIT_FAILURE); \
     } while(0)
     

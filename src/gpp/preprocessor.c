@@ -12,22 +12,22 @@
 #define LINEBREAK_CHAR '\\'
 
 
-struct preprocess_entry{
-    enum language language;
+struct preprocessctx{
     const char *path;
     strbuf_list content;
+    enum language language;
 };
 
 
-void merge_continued_lines(struct preprocess_entry *pe)
+void merge_continued_lines(struct preprocessctx *pctx)
 {
     strbuf *line, *next = NULL;
     char *first_brk = NULL, *last_brk = NULL;
     int merge = 1;
 
     // go over the lines in reverse order
-    for(int i=pe->content.length-1; i >= 0; i--, merge=1){
-        line = pe->content.strings[i];
+    for(int i=pctx->content.length-1; i >= 0; i--, merge=1){
+        line = pctx->content.strings[i];
         strbuf_rstrip(line);
 
         if(
@@ -48,10 +48,10 @@ void merge_continued_lines(struct preprocess_entry *pe)
         if(!merge)
             continue;
         
-        if(i + 1 >= pe->content.length){
+        if(i + 1 >= pctx->content.length){
             lpinfo(
                 "file %s", "unexpected line break at the end of the file",
-                "%d | %s", pe->path, i+1, line->string
+                "%d | %s", pctx->path, i+1, line->string
             );
             continue;
         }
@@ -61,43 +61,55 @@ void merge_continued_lines(struct preprocess_entry *pe)
 
         // get one line below, so we can merge
         // it into the current line
-        next = pe->content.strings[i+1];
+        next = pctx->content.strings[i+1];
 
         if(next->length)
             // if the line below doesn't have any information
             // or string, in it, we can just delete it from the
             // content list
             strbuf_append(line, next->string);
-        strbuf_list_pop_index(&pe->content, i+1);
+        strbuf_list_pop_index(&pctx->content, i+1);
     }
 }
 
-
-void tokenize_lines(struct preprocess_entry *pe)
+void parse_lines(struct preprocessctx *pctx)
 {
-    const char *line = NULL;
-    struct token *token;
+    struct tokenctx tctx;
+    struct token *token = NULL;
+    strbuf *line = NULL;
 
-    for(int i=0; i<pe->content.length; i++){
-        line = pe->content.strings[i]->string;
-        struct tokenctx ctx = TOKEN_CONTEXT(line, pe->language);
-
-        token = next_token(&ctx);
-        if(token != NULL && token->type == TOKEN_PREPROCESS){
-            token = expect_next_token(&ctx, TOKEN_SPACE, pe->path, i+1);
-            printf("ttoken %s\n", token->value.string);
+    for(int i=0; i<pctx->content.length; i++){
+        line = pctx->content.strings[i];
+        tokenctx(&tctx, line->string, pctx->language);
+        
+        while((token=next_token(&tctx, 1)) != NULL){
+            switch(token->type){
+                case TOKEN_UNKNOWN:
+                    lpwarn(
+                        "tokenization", "unexpected token at %s",
+                        "%d | %s", pctx->path, i+1, line->string
+                    );
+                    break;
+                case TOKEN_PREPROCESS:
+                    lpdebug("here");
+                    break;
+                case TOKEN_SPACE:
+                    lpdebug("space");
+                    break;
+                default:
+                    lpdebug("default (%s)", token->value.string);
+                    break;
+            }
         }
 
-        // while((token=next_token(&ctx)) != NULL){
-        //     printf("token %s\n", token->value.string);
-        // }
+        freetokenctx(&tctx);
     }
 }
 
 void preprocess_entry(const char *path)
 {
     FILE *stream = fopen(path, "r");
-    struct preprocess_entry pe = {
+    struct preprocessctx pctx = {
         .path = path,
         .content = STRBUF_LIST_INIT,
         .language = get_path_language_code(path)
@@ -105,22 +117,22 @@ void preprocess_entry(const char *path)
 
     lpdebug(
         "preprocessing entry information: path=%s, language=%s"
-    , pe.path, language_itoa(pe.language));
+    , pctx.path, language_itoa(pctx.language));
 
     if(stream == NULL)
         die("%s", "io", "couldn't open file %s", path, path);
     
     // LANG_UNKNOWN returned by `get_path_language_code`
-    if(pe.language == LANG_UNKNOWN)
+    if(pctx.language == LANG_UNKNOWN)
         lpwarn(
             "%s", "support programming langauge wasn't detected",
-            "behaviour may be unexpected", pe.path
+            "behaviour may be unexpected", pctx.path
         );
 
-    strbuf_list_from_stream(&pe.content, stream);
-    merge_continued_lines(&pe);
-    tokenize_lines(&pe);
+    strbuf_list_from_stream(&pctx.content, stream);
+    merge_continued_lines(&pctx);
+    parse_lines(&pctx);
     
-    strbuf_list_free(&pe.content);
+    strbuf_list_free(&pctx.content);
     fclose(stream);
 }

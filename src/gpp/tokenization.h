@@ -6,9 +6,6 @@
 #include "langext.h"
 
 
-#define TOKEN_CONTEXT(str, lang) { ._offset=0, ._origin=str, ._language=lang }
-
-
 enum token_type{
     TOKEN_UNKNOWN,
     TOKEN_IDENTIFIER,
@@ -24,20 +21,22 @@ enum token_type{
 
 
 struct token{
-    const char *origin;
     enum token_type type;
     strbuf value;
 };
 
 struct tokenctx{
     off_t _offset;
-    const char *_origin;
+    strbuf _origin;
     enum language _language;
 };
 
 
-extern struct token *expect_next_token(struct tokenctx *, enum token_type, const char *, unsigned int);
-extern struct token *next_token(struct tokenctx *);
+extern void tokenctx(struct tokenctx *, const char *, enum language);
+extern void freetokenctx(struct tokenctx *);
+
+//extern struct token *expect_next_token(struct tokenctx *, enum token_type, const char *);
+extern struct token *next_token(struct tokenctx *, int);
 
 
 #endif

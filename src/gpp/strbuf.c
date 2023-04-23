@@ -40,7 +40,7 @@ static void increase_strbuf_list(strbuf_list *bufs, size_t size)
         if(bufs->strings[i] == NULL)
             die(
                 "strbuf_list", "allocating entry space", 
-                "error accourd while allocating space for entry number%d", i
+                "error accourd while allocating space for entry number %d", i
             );
     }
 }
@@ -59,11 +59,12 @@ static void increase_strbuf(strbuf *buf, size_t size)
 
 void strbuf_set(strbuf *buf, const char *text)
 {
-    unsigned int text_len = strlen(text);
-
+    buf->length = strlen(text);
     _STRBUF_ALLOCATE(buf, buf->length + 1);
-    strcpy(buf->string, text);
-    buf->length = text_len;
+
+    if(buf->length)
+        strncpy(buf->string, text, buf->length + 1);
+    buf->string[buf->length] = 0;
 }
 
 void strbuf_append(strbuf *buf, const char *text)
@@ -71,17 +72,26 @@ void strbuf_append(strbuf *buf, const char *text)
     unsigned int text_len = strlen(text);
     unsigned int strbuf_len = buf->length + text_len;
 
+    if(!text_len)
+        return;
+
     _STRBUF_ALLOCATE(buf, strbuf_len + 1);
-    strcpy(&buf->string[buf->length], text);
+    strncpy(
+        &buf->string[buf->length], 
+        text, 
+        text_len + 1
+    );
     buf->length = strbuf_len;
+    buf->string[buf->length] = 0;
 }
 
 char strbuf_pop_index(strbuf *buf, int index)
 {
-    if(index > buf->length)
+    if(index >= buf->length)
         return 0;
     
     char c = buf->string[index];
+
     memmove(
         &buf->string[index],
         &buf->string[index+1], 
@@ -105,9 +115,10 @@ void strbuf_lstrip(strbuf *buf)
         return;
 
     char *c = buf->string;
+
     while(isspace(*c))
         c++;
-    
+
     if(c == buf->string)
         return;
 
@@ -121,7 +132,8 @@ void strbuf_rstrip(strbuf *buf)
         return;
 
     char *c = &buf->string[buf->length-1];
-    while(*c == ' ' || *c == '\t')
+    
+    while(isspace(*c))
         c--;
 
     if(c == &buf->string[buf->length-1])
@@ -139,6 +151,7 @@ void strbuf_free(strbuf *buf)
     buf->length = 0;
     buf->_allocated = 0;
     free(buf->string);
+    buf->string = NULL;
 }
 
 void strbuf_list_append(strbuf_list *bufls, const char *text)
@@ -166,6 +179,7 @@ void strbuf_list_from_stream(strbuf_list *bufls, FILE *stream)
     char buffer[1024];
     strbuf *line = NULL;
 
+    // TODO: support reading lines longer then 1024 bytes
     while(fgets(buffer, sizeof(buffer), stream) != NULL){
         strbuf_list_append(bufls, buffer);
         line = bufls->strings[bufls->length-1];
@@ -182,6 +196,8 @@ void strbuf_list_free(strbuf_list *bufls)
 
     for(int i=0; i<bufls->_allocated; i++)
         strbuf_free(bufls->strings[i]);
+
     free(bufls->strings);
+    bufls->strings = NULL;
 }
 

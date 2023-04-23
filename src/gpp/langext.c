@@ -9,6 +9,7 @@ struct extention_info{
     const char *extls[16];
 };
 
+
 static struct extention_info extention_database[] = {
     { .language=PYTHON,       .extls=PYTHON_EXT     },
     { .language=C,            .extls=C_EXT          },
