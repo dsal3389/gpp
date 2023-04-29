@@ -5,11 +5,11 @@ preprocessor written in C, for all languages
 I think the [vision](#vision) section can answer this for now
 
 ## vision
-in my opinion, when i learned C and the preprocessor step, It sounded like the best feature
-that I wished every programming langauge would have, so I decided to create a preprocessor for
-python, but now I see that this code can be applied to any code base.
+when I learned C and the preprocessor step, It sounded like the best feature
+that I wished every programming langauge would have, so after some time, I decided to create a preprocessor for
+all languages.
 
-for now I keep on testing it only on python.
+for now I test it only on python code.
 
 vision example:
 ```py
@@ -38,4 +38,4 @@ def python2_function():
 #endif
 ```
 
-and all the processed files would be written to to external folders and WONT change the original files
+and all the processed files would be written to an external folders and WONT change the original files

@@ -35,8 +35,8 @@ struct tokenctx{
 extern void tokenctx(struct tokenctx *, const char *, enum language);
 extern void freetokenctx(struct tokenctx *);
 
-//extern struct token *expect_next_token(struct tokenctx *, enum token_type, const char *);
-extern struct token *next_token(struct tokenctx *, int);
+extern struct token *expect_next_token(struct tokenctx *, int, enum token_type, const char *, int);
+extern struct token *next_token(struct tokenctx *, int, const char *, int);
 
 
 #endif

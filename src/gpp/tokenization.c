@@ -12,15 +12,15 @@
 #define is_identifier_char(c_) \
     isalpha(c_) || isdigit(c_) || c_ == '_'
 #define is_separator_char(c_) \
-    strchr(":;[]{}()/\\.,\n", c_) != NULL
+    strchr(":;[]{}()\\.,\n", c_) != NULL
 #define is_operator_char(c_) \
-    strchr("|+=-<>*$&^%!", c_) != NULL
+    strchr("|+=-<>*$&^%!/", c_) != NULL
 #define is_string_identifier_char(cptr_) \
     (*cptr_ == '"' || *cptr_ == '\'' || *cptr_ == '`')
 
 
 #define GET_WHOLE_TOKEN(chk_func, type_, var_) \
-    for(; chk_func(*var_); var_++) \
+    for(; *var_ && (chk_func(*var_)); var_++) \
         strbuf_append_char(&token.value, *var_); \
     token.type = type_; \
 
@@ -38,22 +38,29 @@ void freetokenctx(struct tokenctx *ctx)
     strbuf_free(&ctx->_origin);
 }
 
-// struct token *expect_next_token(struct tokenctx *ctx, enum token_type type, const char *filename)
-// {
-//     struct token *token = next_token(ctx);
+struct token *expect_next_token(struct tokenctx *ctx, int skip_space, enum token_type type, const char *filename, int line_num)
+{
+    struct token *token = next_token(ctx, skip_space, filename, line_num);
 
-//     if(token->type != type)
-//         die(
-//             "tokenization", "unexpected token in file %s",
-//             "%s", filename, ctx->_origin.string
-//         );
-//     return token;
-// }
+    if(token == NULL)
+        die(
+            "tokenization", "unexpected end of token",
+            "foo"
+        );
 
-struct token *next_token(struct tokenctx *ctx, int skip_space)
+    if(token->type != type)
+        die(
+            "tokenization", "unexpected token in file %s",
+            "%s", filename, ctx->_origin.string
+        );
+    return token;
+}
+
+struct token *next_token(struct tokenctx *ctx, int skip_space, const char *filename, int line_num)
 {
     const char *ptr = &ctx->_origin.string[ctx->_offset];
     char string_identifier;
+    int escape_identifier;
     static struct token token;
 
     strbuf_set(&token.value, "");
@@ -98,6 +105,7 @@ struct token *next_token(struct tokenctx *ctx, int skip_space)
             case '^':
             case '%':
             case '!':
+            case '/':
                 GET_WHOLE_TOKEN(is_operator_char, TOKEN_OPERATOR, ptr);
                 break;
             case '\n':
@@ -111,7 +119,6 @@ struct token *next_token(struct tokenctx *ctx, int skip_space)
             case '}':
             case '(':
             case ')':
-            case '/':
             case '\\':
                 strbuf_append_char(&token.value, *ptr++);
                 token.type = TOKEN_SEPARATOR;
@@ -120,9 +127,31 @@ struct token *next_token(struct tokenctx *ctx, int skip_space)
             case '\'':
             case '`':
                 string_identifier = *ptr;
+                escape_identifier = 0;
                 do{
+                    if(*ptr == '\\'){
+                        // check if we need to escape the start string identifier
+                        // because it have escape char before
+                        while(*ptr == '\\'){
+                            strbuf_append_char(&token.value, *ptr++);
+                            escape_identifier = !escape_identifier;
+                        }
+
+                        // if we shouldn't escape the next identifier, then call `continue`
+                        // so the do while loop could check if the current token is
+                        // the starting string identifier
+                        if(!escape_identifier)
+                            continue;
+                    }
+
                     strbuf_append_char(&token.value, *ptr++);
-                } while(*ptr != string_identifier);
+                } while(*ptr && *ptr != string_identifier);
+
+                if(*ptr == 0)
+                    die(
+                        "tokenization", "string start with no closing at %s",
+                        "%d | %s", filename, line_num, ctx->_origin.string
+                    );
 
                 // append the closing quotation mark
                 strbuf_append_char(&token.value, *ptr++);

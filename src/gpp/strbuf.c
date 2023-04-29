@@ -98,6 +98,7 @@ char strbuf_pop_index(strbuf *buf, int index)
         (buf->length - index)*sizeof(char)
     );
     buf->length--;
+    buf->string[buf->length] = 0;
     return c;
 }
 

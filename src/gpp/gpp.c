@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
+#include "ansi.h"
 #include "config.h"
 #include "strbuf.h"
 #include "logging.h"
@@ -16,16 +17,18 @@ static char *progname;
 void usage()
 {
     logeprintf(
-        "%s [flags] ...files\n"
-        "\n"
-        "options:\n"
-        "   -h, --help\tprint this message to STDOUT\n"
-        "   -D, --debug\tprint debug messages to STDOUT\n"
-        "   -q, --quiet\tdon't print anything to STDOUT, not even critical errors\n"
-        "   -l, --follow-links\tfollow link to source files\n"
-        "   -p, --prefix\tset preprocessor operation prefix (default `#`)\n"
-        "   -o, --output\toutput directory path to put all the postprocessed files in (default `pgpp`)\n"
-        "   -m, --minimize\tremove empty lines"
+        ANSI_BOLD_TEXT(
+            "%s [flags] ...files\n"
+            "\n"
+            "options:\n"
+            "   -h, --help          print this message to STDOUT\n"
+            "   -D, --debug         print debug messages to STDOUT\n"
+            "   -q, --quiet         don't print anything to STDOUT, not even critical errors\n"
+            "   -l, --follow-links  follow link to source files\n"
+            "   -p, --prefix        set preprocessor operation prefix (default `#`)\n"
+            "   -o, --output        output directory path to put all the postprocessed files in (default `pgpp`)\n"
+            "   -m, --minimize      remove empty lines\n"
+        )
     , progname);
     exit(EXIT_FAILURE);
 }
@@ -118,8 +121,10 @@ void check_entries(strbuf_list *entries)
     for(int i=0; i<entries->length; i++){
         path = entries->strings[i]->string;
         
-        if(ignore_path(path))
+        if(ignore_path(path)){
+            strbuf_list_pop_index(entries, i--);
             continue;
+        }
 
         if(stat(path, &entry_stat) == -1){
             lperror(

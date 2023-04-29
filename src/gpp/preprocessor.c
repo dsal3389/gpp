@@ -82,19 +82,17 @@ void parse_lines(struct preprocessctx *pctx)
         line = pctx->content.strings[i];
         tokenctx(&tctx, line->string, pctx->language);
         
-        while((token=next_token(&tctx, 1)) != NULL){
+        while((token=next_token(&tctx, 1, pctx->path, i+1)) != NULL){
             switch(token->type){
+                case TOKEN_PREPROCESS:
+                    token = expect_next_token(&tctx, 1, TOKEN_IDENTIFIER, pctx->path, i+1);
+                    printf("next identifier is %s\n", token->value.string);
+                    break;
                 case TOKEN_UNKNOWN:
                     lpwarn(
-                        "tokenization", "unexpected token at %s",
-                        "%d | %s", pctx->path, i+1, line->string
+                        "tokenization", "unknown token at %s, (%d)",
+                        "%d | %s", pctx->path, *token->value.string, i+1, tctx._origin.string
                     );
-                    break;
-                case TOKEN_PREPROCESS:
-                    lpdebug("here");
-                    break;
-                case TOKEN_SPACE:
-                    lpdebug("space");
                     break;
                 default:
                     lpdebug("default (%s)", token->value.string);
@@ -115,10 +113,6 @@ void preprocess_entry(const char *path)
         .language = get_path_language_code(path)
     };
 
-    lpdebug(
-        "preprocessing entry information: path=%s, language=%s"
-    , pctx.path, language_itoa(pctx.language));
-
     if(stream == NULL)
         die("%s", "io", "couldn't open file %s", path, path);
     
@@ -128,6 +122,10 @@ void preprocess_entry(const char *path)
             "%s", "support programming langauge wasn't detected",
             "behaviour may be unexpected", pctx.path
         );
+
+    lpdebug(
+        "preprocessing entry information: path=%s, language=%s"
+    , pctx.path, language_itoa(pctx.language));
 
     strbuf_list_from_stream(&pctx.content, stream);
     merge_continued_lines(&pctx);
