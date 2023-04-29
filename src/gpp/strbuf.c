@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "logging.h"
 #include "strbuf.h"
@@ -9,49 +10,57 @@
 
 #define _STRBUF_ALLOCATE(buf, size) \
     do { \
-        if(buf->_allocated <= size) \
+        if(buf->_allocated < size) \
             increase_strbuf(buf, size); \
     } while(0)
 
 #define _STRBUF_LIST_ALLOCATE(buf, size) \
     do { \
-        if(buf->_allocated <= size) \
+        if(buf->_allocated < size) \
             increase_strbuf_list(buf, size); \
-    } while (0)
+    } while(0)
 
 
 static void increase_strbuf_list(strbuf_list *bufs, size_t size)
 {
-    if(size <= STRBUF_LIST_MIN_INCREASE_SIZE)
-        size = STRBUF_LIST_MIN_INCREASE_SIZE*2;
-    
-    bufs->_allocated += size;
+    unsigned long allocate_size = STRBUF_LIST_MIN_INCREASE_SIZE*ceil((double)size / (double)STRBUF_LIST_MIN_INCREASE_SIZE);
+    unsigned long original_size = bufs->_allocated;
+
+    if(!allocate_size)
+        allocate_size = STRBUF_LIST_MIN_INCREASE_SIZE;
+
+    bufs->_allocated = allocate_size;
     bufs->strings = realloc(bufs->strings, sizeof(void*)*bufs->_allocated);
 
     if(bufs->strings == NULL)
         die(
             "strbuf_list", "adding entries", 
-            "error while adding %lu entries to strbuf list", size
+            "error while adding %ld entries to strbuf list", allocate_size
         );
 
-    for(int i=(bufs->_allocated - size); i<bufs->_allocated; i++){
+    for(unsigned long i=original_size; i<bufs->_allocated; i++){
         bufs->strings[i] = calloc(1, sizeof(strbuf));
 
         if(bufs->strings[i] == NULL)
             die(
                 "strbuf_list", "allocating entry space", 
-                "error accourd while allocating space for entry number %d", i
+                "error accourd while allocating space for entry number %lu", i
             );
     }
 }
 
 static void increase_strbuf(strbuf *buf, size_t size)
 {
-    if(size <= STRBUF_MIN_INCREASE_SIZE)
-        size = STRBUF_MIN_INCREASE_SIZE*2;
+    unsigned long allocate_size = (STRBUF_MIN_INCREASE_SIZE*ceil((double)size / (double)STRBUF_MIN_INCREASE_SIZE));
 
-    buf->_allocated += size;
-    buf->string = realloc(buf->string, buf->_allocated);
+    if(allocate_size == 0)
+        allocate_size = STRBUF_MIN_INCREASE_SIZE;
+    
+    // add extra one for null terminator
+    allocate_size++;
+
+    buf->_allocated = allocate_size;
+    buf->string = realloc(buf->string, sizeof(char)*buf->_allocated);
 
     if(buf->string == NULL)
        die("strbuf", "allocation", "failed reallocating new size for strbuf");
@@ -63,24 +72,20 @@ void strbuf_set(strbuf *buf, const char *text)
     _STRBUF_ALLOCATE(buf, buf->length + 1);
 
     if(buf->length)
-        strncpy(buf->string, text, buf->length + 1);
+        strncpy(buf->string, text, buf->length);
     buf->string[buf->length] = 0;
 }
 
 void strbuf_append(strbuf *buf, const char *text)
 {
-    unsigned int text_len = strlen(text);
-    unsigned int strbuf_len = buf->length + text_len;
+    unsigned long text_len = strlen(text);
+    unsigned long strbuf_len = buf->length + text_len;
 
     if(!text_len)
         return;
 
-    _STRBUF_ALLOCATE(buf, strbuf_len + 1);
-    strncpy(
-        &buf->string[buf->length], 
-        text, 
-        text_len + 1
-    );
+    _STRBUF_ALLOCATE(buf, strbuf_len);
+    strncpy(&buf->string[buf->length], text, text_len);
     buf->length = strbuf_len;
     buf->string[buf->length] = 0;
 }
@@ -105,7 +110,7 @@ char strbuf_pop_index(strbuf *buf, int index)
 void strbuf_append_char(strbuf *buf, unsigned char c)
 {
     buf->length++;
-    _STRBUF_ALLOCATE(buf, buf->length + 1);
+    _STRBUF_ALLOCATE(buf, buf->length);
     buf->string[buf->length-1] = c;
     buf->string[buf->length] = 0;
 }
@@ -146,13 +151,13 @@ void strbuf_rstrip(strbuf *buf)
 
 void strbuf_free(strbuf *buf)
 {
-    if(buf->_allocated == 0)
-        return;
-    
     buf->length = 0;
     buf->_allocated = 0;
-    free(buf->string);
-    buf->string = NULL;
+
+    if(buf->string != NULL){
+        free(buf->string);
+        buf->string = NULL;
+    }
 }
 
 void strbuf_list_append(strbuf_list *bufls, const char *text)
@@ -167,11 +172,19 @@ void strbuf_list_pop_index(strbuf_list *bufls, int index)
     if(index > bufls->length)
         return;
 
-    memmove(
-        &bufls->strings[index], 
-        &bufls->strings[index+1],
-        (bufls->length - index)*sizeof(strbuf*)
-    );
+    // free the poped strbuf, 
+    // because we are never gonna see it again :)
+    strbuf_free(bufls->strings[index]);
+
+    // remove the last index in the list
+    if(index != bufls->length - 1)
+        memmove(
+            &bufls->strings[index], 
+            &bufls->strings[index+1],
+            (bufls->length - index)*sizeof(strbuf*)
+        );
+        
+    bufls->_allocated--;
     bufls->length--;
 }
 
@@ -192,13 +205,12 @@ void strbuf_list_from_stream(strbuf_list *bufls, FILE *stream)
 
 void strbuf_list_free(strbuf_list *bufls)
 {
-    if(bufls->_allocated == 0)
-        return;
-
-    for(int i=0; i<bufls->_allocated; i++)
+    for(unsigned long i=0; i<bufls->_allocated; i++)
         strbuf_free(bufls->strings[i]);
 
-    free(bufls->strings);
-    bufls->strings = NULL;
+    if(bufls->strings != NULL){
+        free(bufls->strings);
+        bufls->strings = NULL;
+    }
 }
 

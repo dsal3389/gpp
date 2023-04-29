@@ -9,19 +9,19 @@
 #define STRBUF_LIST_INIT { ._allocated=0, .length=0, .strings=NULL }
 
 #define STRBUF_MIN_INCREASE_SIZE 64
-#define STRBUF_LIST_MIN_INCREASE_SIZE 4
+#define STRBUF_LIST_MIN_INCREASE_SIZE 8
 
 
 typedef struct{
-    unsigned int _allocated;
-    unsigned int length;
+    unsigned long _allocated;
+    unsigned long length;
     char *string;
 } strbuf;
 
 
 typedef struct{
-    unsigned int _allocated;
-    unsigned int length;
+    unsigned long _allocated;
+    unsigned long length;
     strbuf **strings;
 } strbuf_list;
 
@@ -45,7 +45,7 @@ extern void strbuf_list_free(strbuf_list *);
         strbuf_rstrip(buf); \
     } while(0)
 #define strbuf_pop(buf)        strbuf_pop_index(buf, buf->length-1)
-#define strbuf_list_pop(bufls) strbuf_list_pop_index(bufls, bufls->length)
+#define strbuf_list_pop(bufls) strbuf_list_pop_index(bufls, bufls->length-1)
 
 
 #endif

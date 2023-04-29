@@ -29,6 +29,9 @@ void tokenctx(struct tokenctx *ctx, const char *origin, enum language language)
 {
     ctx->_offset = 0;
     ctx->_language = language;
+    ctx->_origin.string = NULL;
+    ctx->_origin.length = 0;
+    ctx->_origin._allocated = 0;
     strbuf_set(&ctx->_origin, origin);
 }
 
