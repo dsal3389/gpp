@@ -20,11 +20,30 @@ enum token_type{
 };
 
 
+/*
+    contains token information, 
+    like type and string value
+
+    token:
+        type - the enum number token type
+        value - strbuf that contains the token string value
+*/
 struct token{
     enum token_type type;
     strbuf value;
 };
 
+/*
+    this structure is a token context, it saves what was
+    the last processed index in the given text, thats how `next_token`
+    knows how to continue from where it stopped
+
+    tokenctx:
+        _offset - the index that tells from which index to continue tokenizing the given string
+        _origin - the string that should be tokenized
+        _language - the language enum number, so we can to check for additional
+                    tokenization
+*/
 struct tokenctx{
     off_t _offset;
     strbuf _origin;

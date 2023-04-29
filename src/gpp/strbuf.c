@@ -20,7 +20,6 @@
             increase_strbuf_list(buf, size); \
     } while(0)
 
-
 static void increase_strbuf_list(strbuf_list *bufs, size_t size)
 {
     unsigned long allocate_size = STRBUF_LIST_MIN_INCREASE_SIZE*ceil((double)size / (double)STRBUF_LIST_MIN_INCREASE_SIZE);
@@ -49,6 +48,10 @@ static void increase_strbuf_list(strbuf_list *bufs, size_t size)
     }
 }
 
+/*
+    set the `strbuf` allocated memory, expand it if required,
+    the expended size is in multiplication of chunk size `STRBUF_MIN_INCREASE_SIZE`
+*/
 static void increase_strbuf(strbuf *buf, size_t size)
 {
     unsigned long allocate_size = (STRBUF_MIN_INCREASE_SIZE*ceil((double)size / (double)STRBUF_MIN_INCREASE_SIZE));
@@ -66,6 +69,9 @@ static void increase_strbuf(strbuf *buf, size_t size)
        die("strbuf", "allocation", "failed reallocating new size for strbuf");
 }
 
+/* 
+    set the strbuf string value 
+*/
 void strbuf_set(strbuf *buf, const char *text)
 {
     buf->length = strlen(text);
@@ -76,6 +82,9 @@ void strbuf_set(strbuf *buf, const char *text)
     buf->string[buf->length] = 0;
 }
 
+/* 
+    appends a string to the end of the string in the given `strbuf` 
+*/
 void strbuf_append(strbuf *buf, const char *text)
 {
     unsigned long text_len = strlen(text);
@@ -90,6 +99,9 @@ void strbuf_append(strbuf *buf, const char *text)
     buf->string[buf->length] = 0;
 }
 
+/* 
+    pop character from strbuf in the given `index` position 
+*/
 char strbuf_pop_index(strbuf *buf, int index)
 {
     if(index >= buf->length)
@@ -102,11 +114,16 @@ char strbuf_pop_index(strbuf *buf, int index)
         &buf->string[index+1], 
         (buf->length - index)*sizeof(char)
     );
+
     buf->length--;
     buf->string[buf->length] = 0;
     return c;
 }
 
+/* 
+    appends a single character to the end of the string
+    in the strbuf
+*/
 void strbuf_append_char(strbuf *buf, unsigned char c)
 {
     buf->length++;
@@ -115,6 +132,10 @@ void strbuf_append_char(strbuf *buf, unsigned char c)
     buf->string[buf->length] = 0;
 }
 
+/*
+    strip the left side of the string, the space
+    checking is done via `isspace`
+*/
 void strbuf_lstrip(strbuf *buf)
 {
     if(!buf->length)
@@ -132,6 +153,10 @@ void strbuf_lstrip(strbuf *buf)
     memmove(buf->string, c, buf->length+1);
 }
 
+/*
+    like `strbuf_lstrip` but for the right side
+    of the string
+*/
 void strbuf_rstrip(strbuf *buf)
 {
     if(!buf->length)
@@ -149,6 +174,9 @@ void strbuf_rstrip(strbuf *buf)
     *(c+1) = 0;
 }
 
+/*
+    free all the allocated memory inside `strbuf`
+*/
 void strbuf_free(strbuf *buf)
 {
     buf->length = 0;
@@ -160,6 +188,10 @@ void strbuf_free(strbuf *buf)
     }
 }
 
+/*
+    create new `strbuf` at the end of the given `strbuf_list`
+    and set to the given text value
+*/
 void strbuf_list_append(strbuf_list *bufls, const char *text)
 {
     _STRBUF_LIST_ALLOCATE(bufls, bufls->length + 1);
@@ -167,6 +199,9 @@ void strbuf_list_append(strbuf_list *bufls, const char *text)
     bufls->length++;
 }
 
+/*
+    pop the `strbuf` at the given string, and freeing its memory
+*/
 void strbuf_list_pop_index(strbuf_list *bufls, int index)
 {
     if(index > bufls->length)
@@ -176,7 +211,6 @@ void strbuf_list_pop_index(strbuf_list *bufls, int index)
     // because we are never gonna see it again :)
     strbuf_free(bufls->strings[index]);
 
-    // remove the last index in the list
     if(index != bufls->length - 1)
         memmove(
             &bufls->strings[index], 
@@ -188,6 +222,10 @@ void strbuf_list_pop_index(strbuf_list *bufls, int index)
     bufls->length--;
 }
 
+/*
+    reads lines from the given stream, each line is an index
+    in `strbuf_list`
+*/
 void strbuf_list_from_stream(strbuf_list *bufls, FILE *stream)
 {
     char buffer[1024];
@@ -203,6 +241,10 @@ void strbuf_list_from_stream(strbuf_list *bufls, FILE *stream)
     }
 }
 
+/*
+    free `strbuf_list` and all the allocated memories
+    that used for `strbuf`
+*/
 void strbuf_list_free(strbuf_list *bufls)
 {
     for(unsigned long i=0; i<bufls->_allocated; i++)

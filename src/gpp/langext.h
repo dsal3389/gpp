@@ -2,6 +2,11 @@
 #define _LANGEXT_H_ 1
 
 
+/*
+    contains the extension for each language,
+    those predefined values will later be used in `langext.c`
+    in `extention_database`
+*/
 #define PYTHON_EXT     { "py", "pyw", NULL }
 #define C_EXT          { "c", "h", "cpp", "cc", NULL }
 #define JAVASCRIPT_EXT { "js", "jsx", NULL }

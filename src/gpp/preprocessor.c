@@ -12,6 +12,15 @@
 #define LINEBREAK_CHAR '\\'
 
 
+/*
+    contains preprocessor context information that
+    should be used only in `preprocessor.c`
+
+    preprocessctx:
+        path - string contains the entry path
+        content - strbuf_list that contains the content of the entry
+        language - enum number of the language, taken from `langext.c`
+*/
 struct preprocessctx{
     const char *path;
     strbuf_list content;
@@ -19,6 +28,9 @@ struct preprocessctx{
 };
 
 
+/*
+    merge continued lines
+*/
 void merge_continued_lines(struct preprocessctx *pctx)
 {
     strbuf *line, *next = NULL;
